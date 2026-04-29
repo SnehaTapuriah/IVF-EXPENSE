@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IVF Expense Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.6.0/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;--border2:#444c56;--teal:#2dba9a;--teal2:#39d9b8;--ta:rgba(45,186,154,.15);--blue:#58a6ff;--ba:rgba(88,166,255,.12);--amber:#e3b341;--aa:rgba(227,179,65,.12);--rose:#f85149;--ra:rgba(248,81,73,.12);--violet:#bc8cff;--text:#e6edf3;--t2:#8b949e;--t3:#6e7681;--r:8px;--rL:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 18px;height:50px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:8px;flex-wrap:wrap}
+.logo{font-weight:700;font-size:15px;white-space:nowrap}.logo em{color:var(--teal);font-style:normal}
+.hsync{display:flex;align-items:center;gap:8px;font-size:11px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--t3);flex-shrink:0}
+.sync-dot.ok{background:var(--teal)}.sync-dot.err{background:var(--rose)}.sync-dot.loading{background:var(--amber);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 18px;display:flex;gap:0;overflow-x:auto}
+nav button{background:none;border:none;color:var(--t3);padding:11px 12px;font-size:12px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit;transition:.15s}
+nav button:hover{color:var(--t2)}
+nav button.act{color:var(--teal);border-bottom-color:var(--teal);font-weight:500}
+main{padding:16px;max-width:1400px;margin:0 auto}
+.panel{display:none}.panel.act{display:block}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rL);padding:14px;margin-bottom:12px}
+.ct{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;margin-bottom:14px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px}
+.sl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.sv{font-size:20px;font-weight:600;font-family:'SF Mono',monospace}
+.c2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:12px}
+.cc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rL);padding:13px}
+.cl{font-size:10px;color:var(--t3);font-weight:600;margin-bottom:9px;text-transform:uppercase;letter-spacing:.5px}
+.ch{position:relative;height:190px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:10px;color:var(--t3);text-align:left;padding:7px 9px;border-bottom:1px solid var(--border);font-weight:600;text-transform:uppercase;letter-spacing:.5px;background:var(--bg3)}
+td{padding:7px 9px;border-bottom:1px solid var(--border);color:var(--t2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.mono{font-family:'SF Mono',monospace;font-size:12px}
+.amt{font-family:'SF Mono',monospace;color:var(--teal);font-weight:500}
+.badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600}
+.bp{background:var(--aa);color:var(--amber);border:1px solid var(--amber)}
+.bw{background:var(--ra);color:var(--rose);border:1px solid var(--rose)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.col{flex:1;min-width:130px;display:flex;flex-direction:column;gap:4px}
+.col.full{flex-basis:100%}
+label{font-size:10px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+input,select,textarea{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 9px;border-radius:var(--r);font-family:inherit;font-size:13px;width:100%;transition:.15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--ta)}
+input.invalid{border-color:var(--rose)}
+select option{background:var(--bg3)}
+textarea{resize:vertical;min-height:56px}
+.btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--t2);font-family:inherit;transition:.15s}
+.btn:hover{border-color:var(--teal);color:var(--teal);background:var(--ta)}
+.btn:disabled{opacity:.5;cursor:not-allowed;pointer-events:none}
+.bp2{background:var(--teal);color:#000;border-color:var(--teal);font-weight:600}
+.bp2:hover{background:var(--teal2);color:#000;border-color:var(--teal2)}
+.bd{color:var(--rose);border-color:var(--rose)}.bd:hover{background:var(--ra)}
+.bs{color:var(--teal);border-color:var(--teal)}.bs:hover{background:var(--ta)}
+.bi{color:var(--blue);border-color:var(--blue)}.bi:hover{background:var(--ba)}
+.bxs{padding:2px 7px;font-size:11px}
+.br{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.ebar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:9px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px}
+.elbl{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px}
+.fbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.fbar input,.fbar select{flex:1;min-width:100px;max-width:170px}
+.itr td input,.itr td select{background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:4px 5px;font-size:12px;transition:.15s}
+.itr td input:focus,.itr td select:focus{border-bottom-color:var(--teal);box-shadow:none;outline:none}
+.totals-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-top:8px}
+.tot-row{display:flex;justify-content:space-between;font-size:12px}
+.tot-row.gt{font-size:15px;font-weight:600;color:var(--teal);border-top:1px solid var(--border);padding-top:7px;margin-top:3px;grid-column:span 2}
+.tot-lbl{color:var(--t3)}
+.tot-val{font-family:'SF Mono',monospace;color:var(--text)}
+.recon-warn{padding:8px 12px;background:var(--aa);border:1px solid var(--amber);color:var(--amber);border-radius:var(--r);margin-top:8px;font-size:12px;display:none}
+.recon-warn.show{display:block}
+.bc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rL);margin-bottom:9px;overflow:hidden}
+.bh{display:flex;align-items:center;gap:10px;padding:11px 13px;cursor:pointer;transition:.15s}
+.bh:hover{background:var(--bg3)}
+.bn{font-weight:600;font-size:13px;flex:1}
+.bm{font-size:11px;color:var(--t3)}
+.bt2{font-family:'SF Mono',monospace;font-size:14px;color:var(--teal);font-weight:600;white-space:nowrap}
+.bb{display:none;padding:12px;border-top:1px solid var(--border);background:var(--bg3)}
+.bb.open{display:block}
+.vg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.vc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rL);padding:12px}
+.gchips{display:flex;flex-wrap:wrap}
+.gchip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;font-size:12px;border:1px solid;margin:3px}
+.pi2{display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--bg2);border:1px solid var(--amber);border-radius:var(--r);margin-bottom:7px}
+.div{height:1px;background:var(--border);margin:10px 0}
+.empty{text-align:center;padding:44px 16px;color:var(--t3)}
+.empty h3{font-size:15px;font-weight:600;color:var(--t2);margin-bottom:5px}
+.cfm-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.cfm-wrap.open{display:flex}
+.cfm-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rL);padding:22px 24px;max-width:360px;width:100%}
+.cfm-box h4{font-size:15px;font-weight:600;margin-bottom:8px}
+.cfm-box p{font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.5;white-space:pre-wrap}
+.cfm-btns{display:flex;gap:10px;justify-content:flex-end}
+#toast{position:fixed;bottom:18px;right:18px;padding:9px 15px;border-radius:var(--r);font-size:12px;z-index:998;opacity:0;transition:opacity .3s;font-family:inherit;font-weight:500;max-width:90%}
+.setup-box{background:var(--bg2);border:2px dashed var(--border2);border-radius:var(--rL);padding:24px;margin-bottom:16px}
+.code-block{background:#000;color:#9bd3a8;padding:12px;border-radius:var(--r);font-family:'SF Mono',monospace;font-size:11px;overflow-x:auto;white-space:pre;margin:8px 0;line-height:1.4;max-height:280px;overflow-y:auto}
+.copy-btn{position:relative;float:right;margin-bottom:-32px;margin-right:6px;z-index:2}
+@media(max-width:580px){.c2{grid-template-columns:1fr}.totals-grid{grid-template-columns:1fr}.tot-row.gt{grid-column:span 1}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">IVF <em>Expense</em> Manager <span style="font-size:11px;color:var(--t3);font-weight:400;margin-left:6px">Care &amp; Cure</span></div>
+  <div class="hsync">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncLbl" style="color:var(--t3)">Local only</span>
+    <button class="btn bxs" onclick="syncNow()">↻ Sync</button>
+    <button class="btn bxs" onclick="go('setup')">⚙ Setup</button>
+  </div>
+</header>
+
+<nav id="nav">
+  <button class="act" onclick="go('dashboard')">Dashboard</button>
+  <button onclick="go('bills')">Bills</button>
+  <button onclick="go('addBill')">Add bill</button>
+  <button onclick="go('pending')">Pending <span id="pb"></span></button>
+  <button onclick="go('vendors')">Vendors</button>
+  <button onclick="go('groups')">Groups</button>
+  <button onclick="go('analytics')">Analytics</button>
+</nav>
+
+<main>
+
+<!-- ── SETUP ─────────────────────────────────────────── -->
+<div id="tab-setup" class="panel">
+  <div class="card">
+    <div class="ct">Google Sheets Backend Setup (one-time)</div>
+    <p style="color:var(--t2);font-size:13px;line-height:1.7;margin-bottom:14px">
+      All data is stored as one JSON blob in a Google Sheet, chunked across rows so there's no size limit. No CORS issues.
+    </p>
+    <ol style="color:var(--t2);font-size:13px;line-height:2;padding-left:20px;margin-bottom:16px">
+      <li>Create a new <a href="https://sheets.google.com" target="_blank" style="color:var(--blue)">Google Sheet</a>.</li>
+      <li>Open <strong>Extensions → Apps Script</strong>.</li>
+      <li>Delete any existing code and paste the script below. <strong>Save</strong> (Ctrl+S).</li>
+      <li>Click <strong>Deploy → New deployment → ⚙ → Web app</strong>.</li>
+      <li>Set <em>Execute as</em> = <strong>Me</strong>, <em>Who has access</em> = <strong>Anyone</strong>. Click <strong>Deploy</strong>, authorise.</li>
+      <li>Copy the <strong>Web app URL</strong>, paste it below, click <strong>Save &amp; Connect</strong>.</li>
+    </ol>
+
+    <div style="position:relative">
+      <button class="btn bxs copy-btn" onclick="copyScript()">📋 Copy script</button>
+      <div class="code-block" id="scriptBox">function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  var json = '';
+  for (var i = 0; i &lt; data.length; i++) json += data[i][0] || '';
+  return ContentService.createTextOutput(json || '{}')
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  var body = e.postData.contents;
+  sheet.clear();
+  var CHUNK = 45000;
+  var rows = [];
+  for (var i = 0; i &lt; body.length; i += CHUNK) {
+    rows.push([body.substring(i, i + CHUNK)]);
+  }
+  if (rows.length === 0) rows.push(['']);
+  sheet.getRange(1, 1, rows.length, 1).setValues(rows);
+  return ContentService.createTextOutput(JSON.stringify({ok: true, chunks: rows.length, bytes: body.length}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</div>
+    </div>
+
+    <div class="row" style="max-width:600px;margin-top:12px">
+      <div class="col full">
+        <label>Apps Script Web App URL</label>
+        <input type="url" id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec">
+      </div>
+    </div>
+    <div class="br">
+      <button class="btn bp2" onclick="saveConfig()">💾 Save &amp; Connect</button>
+      <button class="btn" onclick="pullNow()">⬇ Pull from Sheets</button>
+      <button class="btn" onclick="syncNow()">⬆ Push to Sheets</button>
+      <button class="btn bd" onclick="disconnect()">✕ Disconnect</button>
+    </div>
+    <div id="cfgStatus" style="margin-top:12px;font-size:12px;color:var(--t3)"></div>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ─────────────────────────────────────── -->
+<div id="tab-dashboard" class="panel act">
+  <div class="stats" id="sg"></div>
+  <div class="c2">
+    <div class="cc"><div class="cl">By group</div><div class="ch"><canvas id="cG"></canvas></div></div>
+    <div class="cc"><div class="cl">Monthly trend</div><div class="ch"><canvas id="cM"></canvas></div></div>
+  </div>
+  <div class="c2">
+    <div class="cc"><div class="cl">Top vendors</div><div class="ch"><canvas id="cV"></canvas></div></div>
+    <div class="cc"><div class="cl">This month — day wise</div><div class="ch"><canvas id="cD"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ── BILLS LIST ─────────────────────────────────────── -->
+<div id="tab-bills" class="panel">
+  <div class="ebar">
+    <span class="elbl">Export:</span>
+    <button class="btn bs" onclick="xPDF('group')">↓ PDF group-wise</button>
+    <button class="btn bs" onclick="xPDF('vendor')">↓ PDF vendor-wise</button>
+    <button class="btn bi" onclick="xXLS('group')">↓ Excel group-wise</button>
+    <button class="btn bi" onclick="xXLS('vendor')">↓ Excel vendor-wise</button>
+  </div>
+  <div class="fbar">
+    <input type="month" id="fm" onchange="rBills()">
+    <select id="fv" onchange="rBills()"><option value="">All vendors</option></select>
+    <select id="fg" onchange="rBills()"><option value="">All groups</option></select>
+    <input type="text" id="fs" placeholder="Search…" oninput="rBills()" style="max-width:180px">
+  </div>
+  <div id="bl"></div>
+</div>
+
+<!-- ── ADD BILL ───────────────────────────────────────── -->
+<div id="tab-addBill" class="panel">
+  <h2 id="abh" style="font-size:16px;font-weight:700;margin-bottom:12px">Add bill</h2>
+  <div class="card">
+    <div class="ct">Bill details</div>
+    <div class="row">
+      <div class="col"><label>Vendor *</label><select id="fVen"><option value="">Select vendor</option></select></div>
+      <div class="col"><label>Or new vendor name</label><input type="text" id="fVenN" placeholder="Type new vendor"></div>
+      <div class="col"><label>Bill date *</label><input type="date" id="fDt"></div>
+      <div class="col"><label>Bill number</label><input type="text" id="fBn" placeholder="INV-001"></div>
+    </div>
+    <div class="row"><div class="col full"><label>Notes</label><input type="text" id="fNt" placeholder="Optional"></div></div>
+    <div class="div"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+      <span style="font-size:13px;font-weight:600">Items</span>
+      <button class="btn" style="padding:3px 9px;font-size:11px" onclick="addRow()">+ Add item</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table><thead><tr><th>Item name</th><th>Group</th><th>Qty</th><th>Rate ₹</th><th>Total ₹</th><th></th></tr></thead><tbody id="itb"></tbody></table>
+    </div>
+
+    <div class="totals-grid">
+      <div class="tot-row"><span class="tot-lbl">Items subtotal:</span><span class="tot-val" id="itemsSub">₹0.00</span></div>
+      <div class="tot-row" style="grid-column:1/-1;gap:6px;align-items:center;flex-wrap:wrap">
+        <label style="font-size:10px;color:var(--t3);text-transform:uppercase;font-weight:600">Discount ₹</label>
+        <input type="number" id="fDisc" min="0" step="any" placeholder="0" oninput="updGT()" style="max-width:90px;font-size:12px;padding:4px 7px">
+        <label style="font-size:10px;color:var(--t3);text-transform:uppercase;font-weight:600;margin-left:8px">Tax ₹</label>
+        <input type="number" id="fTax" min="0" step="any" placeholder="0" oninput="updGT()" style="max-width:90px;font-size:12px;padding:4px 7px">
+        <label style="font-size:10px;color:var(--t3);text-transform:uppercase;font-weight:600;margin-left:8px">Other ₹</label>
+        <input type="number" id="fOther" min="0" step="any" placeholder="0" oninput="updGT()" style="max-width:90px;font-size:12px;padding:4px 7px">
+      </div>
+      <div class="tot-row gt"><span>Bill total:</span><span class="tot-val amt" id="gt">₹0.00</span></div>
+      <div class="tot-row" style="grid-column:1/-1">
+        <span class="tot-lbl">Bill total on receipt (for verification):</span>
+        <input type="number" id="fStated" min="0" step="any" placeholder="0" oninput="checkRecon()" style="max-width:120px;font-size:12px;padding:4px 7px">
+      </div>
+    </div>
+    <div id="reconWarn" class="recon-warn"></div>
+
+    <div class="br">
+      <button class="btn bp2" id="saveBtn" onclick="saveBillClick()">💾 Save bill</button>
+      <button class="btn" onclick="resetForm()">↩ Reset</button>
+    </div>
+    <input type="hidden" id="eid">
+  </div>
+</div>
+
+<!-- ── PENDING ─────────────────────────────────────────── -->
+<div id="tab-pending" class="panel">
+  <h2 style="font-size:16px;font-weight:700;margin-bottom:12px">Pending group assignment</h2>
+  <div id="pl"></div>
+</div>
+
+<!-- ── VENDORS ─────────────────────────────────────────── -->
+<div id="tab-vendors" class="panel">
+  <h2 style="font-size:16px;font-weight:700;margin-bottom:12px">Vendor master</h2>
+  <div class="card">
+    <div class="ct" id="vft">Add new vendor</div>
+    <div class="row">
+      <div class="col"><label>Name *</label><input type="text" id="vn" placeholder="Vendor name"></div>
+      <div class="col"><label>Category</label><input type="text" id="vc" placeholder="Pharma, Lab…"></div>
+      <div class="col"><label>Contact</label><input type="text" id="vco"></div>
+      <div class="col"><label>Phone</label><input type="text" id="vp"></div>
+    </div>
+    <div class="row">
+      <div class="col"><label>Email</label><input type="email" id="ve"></div>
+      <div class="col"><label>GST</label><input type="text" id="vg"></div>
+      <div class="col full"><label>Address</label><textarea id="va" rows="2"></textarea></div>
+    </div>
+    <div class="br">
+      <button class="btn bp2" onclick="saveVendor()">💾 Save vendor</button>
+      <button class="btn" onclick="rstVendor()">↩ Reset</button>
+    </div>
+    <input type="hidden" id="veid">
+  </div>
+  <div class="vg" id="vgrid"></div>
+</div>
+
+<!-- ── GROUPS ──────────────────────────────────────────── -->
+<div id="tab-groups" class="panel">
+  <h2 style="font-size:16px;font-weight:700;margin-bottom:12px">Expense groups</h2>
+  <div class="card">
+    <div class="ct">Add group</div>
+    <div class="row">
+      <div class="col"><label>Group name *</label><input type="text" id="gn" placeholder="Media, Disposables…"></div>
+      <div class="col" style="max-width:100px"><label>Colour</label><input type="color" id="gc" value="#2dba9a"></div>
+      <div class="col"><label>Description</label><input type="text" id="gd" placeholder="Optional"></div>
+    </div>
+    <div class="br"><button class="btn bp2" onclick="saveGroup()">+ Add group</button></div>
+  </div>
+  <div class="gchips" id="gchips"></div>
+</div>
+
+<!-- ── ANALYTICS ──────────────────────────────────────── -->
+<div id="tab-analytics" class="panel">
+  <div class="ebar">
+    <span class="elbl">Export:</span>
+    <button class="btn bs" onclick="xPDF('group')">↓ PDF group-wise</button>
+    <button class="btn bs" onclick="xPDF('vendor')">↓ PDF vendor-wise</button>
+    <button class="btn bi" onclick="xXLS('group')">↓ Excel group-wise</button>
+    <button class="btn bi" onclick="xXLS('vendor')">↓ Excel vendor-wise</button>
+  </div>
+  <div class="fbar">
+    <select id="ay" onchange="rAna()" style="max-width:100px"></select>
+    <select id="ag" onchange="rAna()" style="max-width:170px"><option value="">All groups</option></select>
+  </div>
+  <div class="c2">
+    <div class="cc"><div class="cl">Monthly by group (stacked)</div><div class="ch"><canvas id="aSt"></canvas></div></div>
+    <div class="cc"><div class="cl">Group breakdown</div><div class="ch"><canvas id="aPi"></canvas></div></div>
+  </div>
+  <div class="cc" style="margin-bottom:12px"><div class="cl">Top 15 items</div><div class="ch" style="height:260px"><canvas id="aIt"></canvas></div></div>
+  <div class="card"><div class="ct">Item-wise report</div><div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>Group</th><th>Qty</th><th>Bills</th><th>Total ₹</th><th>Avg rate</th></tr></thead><tbody id="atI"></tbody></table></div></div>
+  <div class="card" style="margin-top:12px"><div class="ct">Vendor-wise report</div><div style="overflow-x:auto"><table><thead><tr><th>Vendor</th><th>Bills</th><th>Total ₹</th><th>Avg/bill</th></tr></thead><tbody id="atV"></tbody></table></div></div>
+</div>
+
+</main>
+
+<div class="cfm-wrap" id="cfmWrap">
+  <div class="cfm-box">
+    <h4 id="cfmTitle">Confirm</h4>
+    <p id="cfmMsg"></p>
+    <div class="cfm-btns">
+      <button class="btn" onclick="cfmNo()" id="cfmNoBtn">Cancel</button>
+      <button class="btn bp2" id="cfmYes" onclick="cfmOk()">OK</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// LOCAL STORAGE
+// ══════════════════════════════════════════════════════════
+const LS = {
+  get(k){try{const v=localStorage.getItem('ivfe_'+k);return v?JSON.parse(v):null}catch{return null}},
+  set(k,v){try{localStorage.setItem('ivfe_'+k,JSON.stringify(v))}catch{}},
+  del(k){try{localStorage.removeItem('ivfe_'+k)}catch{}}
+};
+function getUrl(){return LS.get('gsUrl')||'';}
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+let G=[],V=[],B=[],isSaving=false,saveAttemptedOnce=false;
+let pendingSync=false,syncTimer=null;
+const CH={};
+
+const DG=[
+  {id:'g1',name:'Injections',color:'#2dba9a',desc:'Stimulation & trigger'},
+  {id:'g2',name:'Consumables',color:'#58a6ff',desc:'Syringes, tubes, gloves'},
+  {id:'g3',name:'Media',color:'#bc8cff',desc:'Culture media & reagents'},
+  {id:'g4',name:'Salary',color:'#e3b341',desc:'Staff salaries'},
+  {id:'g5',name:'Equipment',color:'#f85149',desc:'Equipment & maintenance'},
+  {id:'g6',name:'Lab chemicals',color:'#39d9b8',desc:'Lab chemicals'},
+  {id:'g7',name:'Disposables',color:'#7ee787',desc:'Single-use items'},
+  {id:'g8',name:'Pharmacy',color:'#f778ba',desc:'Drugs & medicines'},
+  {id:'g9',name:'Miscellaneous',color:'#8b949e',desc:'Other expenses'}
+];
+
+// ══════════════════════════════════════════════════════════
+// SYNC (single-blob to Google Sheets, no CORS)
+// ══════════════════════════════════════════════════════════
+function setSyncStatus(state,msg){
+  const dot=document.getElementById('syncDot');
+  const lbl=document.getElementById('syncLbl');
+  dot.className='sync-dot '+(state==='ok'?'ok':state==='loading'?'loading':state==='err'?'err':'');
+  lbl.textContent=msg;
+  lbl.style.color=state==='ok'?'var(--teal)':state==='loading'?'var(--amber)':state==='err'?'var(--rose)':'var(--t3)';
+}
+
+// Pull all data from sheet
+async function pullNow(){
+  const url=getUrl();
+  if(!url){toast('Set up Sheets URL first','err');return;}
+  setSyncStatus('loading','Pulling…');
+  try{
+    // Cache-busting query param so browser/Apps Script never serve a stale response
+    const r=await fetch(url+'?t='+Date.now(),{method:'GET',redirect:'follow'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const txt=await r.text();
+    let data;
+    try{data=JSON.parse(txt||'{}');}catch(e){throw new Error('Invalid JSON from sheet');}
+    if(data && (data.bills||data.vendors||data.groups)){
+      B=Array.isArray(data.bills)?data.bills:[];
+      V=Array.isArray(data.vendors)?data.vendors:[];
+      G=Array.isArray(data.groups)&&data.groups.length?data.groups:DG;
+      LS.set('bills',B);LS.set('vendors',V);LS.set('groups',G);
+      setSyncStatus('ok','Synced · '+B.length+' bills');
+      toast('Pulled '+B.length+' bills from Sheets');
+      renderAll();
+    }else{
+      // Empty sheet — keep local data
+      setSyncStatus('ok','Sheet empty · using local');
+      toast('Sheet is empty — local data kept');
+    }
+    document.getElementById('cfgStatus').textContent='✓ Pull successful';
+  }catch(err){
+    setSyncStatus('err','Pull failed');
+    toast('Pull failed: '+err.message,'err');
+    document.getElementById('cfgStatus').textContent='✕ '+err.message;
+  }
+}
+
+// Push everything to sheet (debounced auto-trigger or manual)
+async function syncNow(){
+  const url=getUrl();
+  if(!url){toast('Set up Sheets URL first','err');return;}
+  if(pendingSync)return;
+  pendingSync=true;
+  setSyncStatus('loading','Syncing…');
+  try{
+    const payload=JSON.stringify({bills:B,vendors:V,groups:G,_at:new Date().toISOString()});
+    // CRITICAL: text/plain avoids CORS preflight (simple request)
+    const r=await fetch(url,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:payload,
+      redirect:'follow'
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const res=await r.json();
+    if(!res.ok)throw new Error(res.error||'Server error');
+    setSyncStatus('ok','Synced · '+B.length+' bills');
+    return true;
+  }catch(err){
+    setSyncStatus('err','Sync failed (saved locally)');
+    toast('Sync failed: '+err.message+' · data is safe locally','warn');
+    return false;
+  }finally{
+    pendingSync=false;
+  }
+}
+
+// Debounced auto-sync after any change
+function queueSync(){
+  if(!getUrl())return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(syncNow,800);
+}
+
+// Save state locally + queue background sync
+function persist(){
+  LS.set('bills',B);LS.set('vendors',V);LS.set('groups',G);
+  queueSync();
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+async function init(){
+  const u=getUrl();
+  if(u)document.getElementById('cfgUrl').value=u;
+  document.getElementById('fDt').value=new Date().toISOString().slice(0,10);
+  // Always start from local cache for instant UI
+  G=LS.get('groups')||DG;
+  V=LS.get('vendors')||[];
+  B=LS.get('bills')||[];
+  if(u){
+    setSyncStatus('loading','Loading…');
+    renderAll();
+    // Try to pull latest in background
+    await pullNow();
+  }else{
+    setSyncStatus('','Local only — set up Sheets');
+    renderAll();
+  }
+}
+
+function renderAll(){updPB();rGroups();rVendors();rDash();fillVSel();}
+
+// ══════════════════════════════════════════════════════════
+// SETUP
+// ══════════════════════════════════════════════════════════
+function saveConfig(){
+  const url=document.getElementById('cfgUrl').value.trim();
+  if(!url){toast('Paste the Web App URL first','err');return;}
+  if(!url.startsWith('https://script.google.com/')){
+    toast('URL should start with https://script.google.com/','err');return;
+  }
+  LS.set('gsUrl',url);
+  document.getElementById('cfgStatus').textContent='URL saved. Pulling data…';
+  pullNow().then(()=>{
+    // If sheet was empty but we have local data, push it up
+    if(B.length>0 || V.length>0){
+      const haveData=LS.get('bills')||LS.get('vendors');
+      if(haveData && haveData.length){
+        cfm('Push local data?','You have local data. Push it to your new sheet now?',()=>syncNow(),{yesText:'Push'});
+      }
+    }
+  });
+}
+function disconnect(){
+  cfm('Disconnect from Sheets?','Local data is kept. You can reconnect anytime.',()=>{
+    LS.del('gsUrl');
+    document.getElementById('cfgUrl').value='';
+    setSyncStatus('','Local only');
+    document.getElementById('cfgStatus').textContent='Disconnected';
+    toast('Disconnected — local only mode');
+  },{yesText:'Disconnect',danger:true});
+}
+function copyScript(){
+  const txt=document.getElementById('scriptBox').textContent;
+  navigator.clipboard.writeText(txt).then(()=>toast('Script copied!')).catch(()=>toast('Copy failed','err'));
+}
+
+// ══════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function fN(n){return isNaN(n)||n===null?'0.00':Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function fD(d){if(!d)return'';const[y,m,dy]=d.split('-');return dy+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y}
+function sM(ym){const[y,m]=ym.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+"'"+y.slice(2)}
+
+function go(name){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('act'));
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('act'));
+  document.getElementById('tab-'+name).classList.add('act');
+  const tabs=['dashboard','bills','addBill','pending','vendors','groups','analytics','setup'];
+  const idx=tabs.indexOf(name);
+  if(idx<7)document.querySelectorAll('#nav button')[idx]?.classList.add('act');
+  if(name==='dashboard')rDash();
+  if(name==='bills'){fillF();rBills();}
+  if(name==='pending')rPend();
+  if(name==='vendors')rVendors();
+  if(name==='groups')rGroups();
+  if(name==='analytics')rAna();
+  if(name==='addBill')fillVSel();
+  if(name==='setup'){const u=getUrl();if(u)document.getElementById('cfgUrl').value=u;}
+}
+
+function updPB(){const n=B.reduce((s,b)=>s+b.items.filter(i=>!i.groupId).length,0);document.getElementById('pb').textContent=n?'('+n+')':'';}
+function toast(msg,t='ok'){const el=document.getElementById('toast');el.textContent=msg;el.style.background=t==='ok'?'var(--teal)':t==='warn'?'var(--amber)':'var(--rose)';el.style.color=t==='ok'?'#000':t==='warn'?'#000':'#fff';el.style.opacity='1';clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity='0',3000);}
+
+let _cfmCb=null;
+function cfm(title,msg,cb,opts={}){
+  _cfmCb=cb;
+  document.getElementById('cfmTitle').textContent=title;
+  document.getElementById('cfmMsg').textContent=msg;
+  const yes=document.getElementById('cfmYes');
+  yes.textContent=opts.yesText||'OK';
+  yes.className='btn '+(opts.danger?'bd':'bp2');
+  const noBtn=document.getElementById('cfmNoBtn');
+  noBtn.textContent=opts.noText||'Cancel';
+  noBtn.style.display=opts.noText===''?'none':'';
+  document.getElementById('cfmWrap').classList.add('open');
+}
+function cfmOk(){document.getElementById('cfmWrap').classList.remove('open');document.getElementById('cfmNoBtn').style.display='';const cb=_cfmCb;_cfmCb=null;if(cb)cb();}
+function cfmNo(){document.getElementById('cfmWrap').classList.remove('open');document.getElementById('cfmNoBtn').style.display='';_cfmCb=null;}
+
+// ══════════════════════════════════════════════════════════
+// ITEMS & TOTALS
+// ══════════════════════════════════════════════════════════
+function addRow(name='',gid='',qty='',rate='',tot=''){
+  const tr=document.createElement('tr');tr.className='itr';
+  const go2='<option value="">— Pending —</option>'+G.map(g=>`<option value="${g.id}"${g.id===gid?' selected':''}>${g.name}</option>`).join('');
+  tr.innerHTML=`<td><input type="text" value="${name}" placeholder="Item name" oninput="updGT()"></td><td><select onchange="updGT()">${go2}</select></td><td><input type="number" value="${qty}" min="0" step="any" oninput="cRow(this)" style="width:55px"></td><td><input type="number" value="${rate}" min="0" step="any" oninput="cRow(this)" style="width:75px"></td><td><input type="number" value="${tot}" min="0" step="any" oninput="updGT()" style="width:85px"></td><td><button class="btn bd bxs" onclick="this.closest('tr').remove();updGT()">✕</button></td>`;
+  document.getElementById('itb').appendChild(tr);updGT();
+}
+function cRow(el){const r=el.closest('tr'),q=parseFloat(r.cells[2].querySelector('input').value)||0,rt=parseFloat(r.cells[3].querySelector('input').value)||0;if(q&&rt)r.cells[4].querySelector('input').value=(q*rt).toFixed(2);updGT();}
+function updGT(){
+  let sub=0;
+  document.querySelectorAll('#itb .itr').forEach(r=>{sub+=parseFloat(r.cells[4].querySelector('input').value)||0;});
+  const disc=parseFloat(document.getElementById('fDisc').value)||0;
+  const tax=parseFloat(document.getElementById('fTax').value)||0;
+  const other=parseFloat(document.getElementById('fOther').value)||0;
+  document.getElementById('itemsSub').textContent='₹'+fN(sub);
+  document.getElementById('gt').textContent='₹'+fN(sub-disc+tax+other);
+  checkRecon();
+}
+function checkRecon(){
+  const grand=parseFloat(document.getElementById('gt').textContent.replace(/[₹,]/g,''))||0;
+  const stated=parseFloat(document.getElementById('fStated').value);
+  const w=document.getElementById('reconWarn');
+  if(!stated||stated<=0){w.classList.remove('show');return;}
+  const diff=Math.abs(grand-stated);
+  if(diff<0.5)w.classList.remove('show');
+  else{w.classList.add('show');w.textContent='⚠ Mismatch: calculated ₹'+fN(grand)+' vs receipt total ₹'+fN(stated)+' (difference ₹'+fN(diff)+'). Adjust items, discount, tax or other charges.';}
+}
+function fillVSel(){const s=document.getElementById('fVen'),c=s.value;s.innerHTML='<option value="">Select vendor</option>'+V.map(v=>`<option value="${v.id}">${v.name}</option>`).join('');s.value=c;}
+
+// ══════════════════════════════════════════════════════════
+// VALIDATION & SAVE BILL
+// ══════════════════════════════════════════════════════════
+function validateBill(){
+  const errs=[];
+  const vid=document.getElementById('fVen').value;
+  const newVendor=document.getElementById('fVenN').value.trim();
+  if(!vid&&!newVendor)errs.push('Vendor: select an existing vendor or type a new vendor name.');
+  if(!document.getElementById('fDt').value)errs.push('Bill date is required.');
+  let itemCount=0,emptyName=0;
+  document.querySelectorAll('#itb .itr').forEach(r=>{
+    const name=r.cells[0].querySelector('input').value.trim();
+    const tot=parseFloat(r.cells[4].querySelector('input').value)||0;
+    if(name||tot>0){itemCount++;if(!name)emptyName++;}
+  });
+  if(itemCount===0)errs.push('Add at least one item with a name and total.');
+  if(emptyName>0)errs.push(emptyName+' item(s) have a total but no name.');
+  return errs;
+}
+
+function saveBillClick(){
+  if(isSaving){toast('Already saving — please wait','warn');return;}
+  const errs=validateBill();
+  if(errs.length){cfm('Cannot save bill','Please fix the following:\n\n• '+errs.join('\n• '),null,{yesText:'OK',noText:''});return;}
+  const grand=parseFloat(document.getElementById('gt').textContent.replace(/[₹,]/g,''))||0;
+  const stated=parseFloat(document.getElementById('fStated').value);
+  if(stated&&Math.abs(grand-stated)>=0.5&&!saveAttemptedOnce){
+    saveAttemptedOnce=true;
+    cfm('Total mismatch','Calculated total ₹'+fN(grand)+' does not match receipt total ₹'+fN(stated)+'.\n\nClick "Save anyway" to ignore.',()=>doSave(),{yesText:'Save anyway',danger:true});
+    return;
+  }
+  doSave();
+}
+
+function doSave(){
+  if(isSaving)return;
+  isSaving=true;
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true;btn.textContent='Saving…';
+  try{
+    let vid=document.getElementById('fVen').value,vn='';
+    if(!vid){
+      const nn=document.getElementById('fVenN').value.trim();
+      if(nn){
+        const nv={id:uid(),name:nn,category:'',contact:'',phone:'',email:'',gst:'',address:''};
+        V.push(nv);vid=nv.id;vn=nn;
+      }
+    }
+    const vnd=V.find(v=>v.id===vid);if(vnd)vn=vnd.name;
+    const items=[];
+    document.querySelectorAll('#itb .itr').forEach(r=>{
+      const name=r.cells[0].querySelector('input').value.trim();
+      if(!name)return;
+      items.push({id:uid(),name,groupId:r.cells[1].querySelector('select').value,qty:parseFloat(r.cells[2].querySelector('input').value)||0,rate:parseFloat(r.cells[3].querySelector('input').value)||0,total:parseFloat(r.cells[4].querySelector('input').value)||0});
+    });
+    const disc=parseFloat(document.getElementById('fDisc').value)||0;
+    const tax=parseFloat(document.getElementById('fTax').value)||0;
+    const other=parseFloat(document.getElementById('fOther').value)||0;
+    const stated=parseFloat(document.getElementById('fStated').value)||null;
+    const itemsSub=items.reduce((s,i)=>s+i.total,0);
+    const grand=itemsSub-disc+tax+other;
+    const eid=document.getElementById('eid').value;
+    const bill={id:eid||uid(),vendorId:vid,vendorName:vn,date:document.getElementById('fDt').value,billNo:document.getElementById('fBn').value,notes:document.getElementById('fNt').value,items,discount:disc,tax,other,statedTotal:stated,total:grand,createdAt:eid?(B.find(b=>b.id===eid)?.createdAt||new Date().toISOString()):new Date().toISOString(),updatedAt:new Date().toISOString()};
+    if(eid){const i=B.findIndex(b=>b.id===eid);if(i>-1)B[i]=bill;}else B.push(bill);
+    persist();
+    toast(eid?'Bill updated!':'Bill saved!');
+    resetForm();updPB();go('bills');
+  }catch(err){
+    toast('Save failed: '+err.message,'err');
+  }finally{
+    isSaving=false;saveAttemptedOnce=false;
+    btn.disabled=false;btn.innerHTML='💾 Save bill';
+  }
+}
+
+function resetForm(){
+  ['fVen','fVenN','fDt','fBn','fNt','fDisc','fTax','fOther','fStated'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('itb').innerHTML='';
+  document.getElementById('itemsSub').textContent='₹0.00';
+  document.getElementById('gt').textContent='₹0.00';
+  document.getElementById('reconWarn').classList.remove('show');
+  document.getElementById('eid').value='';
+  document.getElementById('abh').textContent='Add bill';
+  document.getElementById('fDt').value=new Date().toISOString().slice(0,10);
+  saveAttemptedOnce=false;
+}
+
+// ══════════════════════════════════════════════════════════
+// BILLS LIST
+// ══════════════════════════════════════════════════════════
+function fillF(){const vs=document.getElementById('fv'),vc=vs.value;vs.innerHTML='<option value="">All vendors</option>'+V.map(v=>`<option value="${v.id}">${v.name}</option>`).join('');vs.value=vc;const gs=document.getElementById('fg'),gc=gs.value;gs.innerHTML='<option value="">All groups</option>'+G.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');gs.value=gc;}
+function rBills(){
+  fillF();
+  const mf=document.getElementById('fm').value,vf=document.getElementById('fv').value,gf=document.getElementById('fg').value,sf=document.getElementById('fs').value.toLowerCase();
+  const fl=B.filter(b=>{if(mf&&!b.date.startsWith(mf))return false;if(vf&&b.vendorId!==vf)return false;if(gf&&!b.items.some(i=>i.groupId===gf))return false;if(sf&&!b.vendorName.toLowerCase().includes(sf)&&!(b.billNo||'').toLowerCase().includes(sf))return false;return true;}).sort((a,b)=>b.date.localeCompare(a.date));
+  const el=document.getElementById('bl');
+  if(!fl.length){el.innerHTML='<div class="empty"><h3>No bills found</h3></div>';return;}
+  el.innerHTML=fl.map(b=>{
+    const hp=b.items.some(i=>!i.groupId);
+    let reconWarn='';
+    if(b.statedTotal&&Math.abs(b.total-b.statedTotal)>=0.5)reconWarn=' <span class="badge bw">Mismatch ₹'+fN(Math.abs(b.total-b.statedTotal))+'</span>';
+    return`<div class="bc"><div class="bh" onclick="this.nextElementSibling.classList.toggle('open')"><div style="flex:1"><div class="bn">${b.vendorName} ${hp?'<span class="badge bp">Pending</span>':''}${reconWarn}</div><div class="bm">${fD(b.date)}${b.billNo?' · #'+b.billNo:''} · ${b.items.length} items</div></div><div class="bt2">₹${fN(b.total)}</div></div><div class="bb"><table><thead><tr><th>Item</th><th>Group</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead><tbody>${b.items.map(i=>{const g=G.find(x=>x.id===i.groupId);return`<tr><td>${i.name}</td><td>${g?`<span class="badge" style="background:${g.color}22;color:${g.color};border:1px solid ${g.color}">${g.name}</span>`:'<span class="badge bp">Pending</span>'}</td><td class="mono">${i.qty||'-'}</td><td class="mono">${i.rate?'₹'+fN(i.rate):'-'}</td><td class="amt">₹${fN(i.total)}</td></tr>`}).join('')}</tbody></table>${(b.discount||b.tax||b.other)?`<div style="margin-top:8px;padding:8px;background:var(--bg2);border-radius:var(--r);font-size:11px;color:var(--t3)">Subtotal: ₹${fN(b.items.reduce((s,i)=>s+i.total,0))}${b.discount?' · Discount −₹'+fN(b.discount):''}${b.tax?' · Tax +₹'+fN(b.tax):''}${b.other?' · Other +₹'+fN(b.other):''}</div>`:''}${b.notes?`<div style="margin-top:6px;font-size:11px;color:var(--t3)">📝 ${b.notes}</div>`:''}<div class="br"><button class="btn bxs" onclick="editBill('${b.id}')">✎ Edit</button><button class="btn bd bxs" onclick="delBill('${b.id}')">✕ Delete</button></div></div></div>`;
+  }).join('');
+}
+function delBill(id){
+  cfm('Delete bill?','This cannot be undone.',()=>{
+    B=B.filter(b=>b.id!==id);
+    persist();rBills();updPB();toast('Bill deleted');
+  },{yesText:'Delete',danger:true});
+}
+
+function editBill(id){
+  const b=B.find(x=>x.id===id);if(!b)return;
+  fillVSel();
+  document.getElementById('fVen').value=b.vendorId||'';
+  document.getElementById('fVenN').value='';
+  document.getElementById('fDt').value=b.date;
+  document.getElementById('fBn').value=b.billNo||'';
+  document.getElementById('fNt').value=b.notes||'';
+  document.getElementById('fDisc').value=b.discount||'';
+  document.getElementById('fTax').value=b.tax||'';
+  document.getElementById('fOther').value=b.other||'';
+  document.getElementById('fStated').value=b.statedTotal||'';
+  document.getElementById('eid').value=id;
+  document.getElementById('itb').innerHTML='';
+  b.items.forEach(i=>addRow(i.name,i.groupId,i.qty,i.rate,i.total));
+  updGT();checkRecon();
+  document.getElementById('abh').textContent='Edit bill — '+b.vendorName;
+  go('addBill');window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════════════════════
+// PENDING
+// ══════════════════════════════════════════════════════════
+function rPend(){
+  const el=document.getElementById('pl');const pend=[];
+  B.forEach(b=>{b.items.forEach((item,idx)=>{if(!item.groupId)pend.push({bid:b.id,bv:b.vendorName,bd:b.date,idx,item});});});
+  if(!pend.length){el.innerHTML='<div class="empty"><h3>All items assigned!</h3></div>';return;}
+  const go2=G.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+  el.innerHTML=`<p style="font-size:12px;color:var(--t3);margin-bottom:10px">${pend.length} item(s) pending</p>`+pend.map((p,i)=>`<div class="pi2"><div style="flex:1"><div style="font-weight:600;font-size:13px">${p.item.name}</div><div style="font-size:11px;color:var(--t3)">${p.bv} · ${fD(p.bd)} · ₹${fN(p.item.total)}</div></div><select id="ps_${i}" style="width:150px"><option value="">Select group</option>${go2}</select><button class="btn bp2" style="padding:4px 9px;font-size:11px" onclick="asgn('${p.bid}',${p.idx},${i})">Assign</button></div>`).join('');
+}
+function asgn(bid,idx,i){
+  const s=document.getElementById('ps_'+i);if(!s.value){toast('Select a group','err');return;}
+  const b=B.find(x=>x.id===bid);if(!b)return;
+  b.items[idx].groupId=s.value;
+  persist();rPend();updPB();toast('Assigned!');
+}
+
+// ══════════════════════════════════════════════════════════
+// GROUPS
+// ══════════════════════════════════════════════════════════
+function saveGroup(){
+  const name=document.getElementById('gn').value.trim();if(!name){toast('Name required','err');return;}
+  const g={id:uid(),name,color:document.getElementById('gc').value,desc:document.getElementById('gd').value};
+  G.push(g);persist();rGroups();fillVSel();
+  document.getElementById('gn').value='';document.getElementById('gd').value='';toast('Group added!');
+}
+function delGroup(id){
+  cfm('Delete group?','Items in this group will become unassigned.',()=>{
+    G=G.filter(g=>g.id!==id);
+    B.forEach(b=>b.items.forEach(i=>{if(i.groupId===id)i.groupId='';}));
+    persist();rGroups();toast('Group deleted');
+  },{yesText:'Delete',danger:true});
+}
+function rGroups(){document.getElementById('gchips').innerHTML=G.map(g=>`<div class="gchip" style="background:${g.color}22;border-color:${g.color};color:${g.color}"><span style="width:7px;height:7px;border-radius:50%;background:${g.color};display:inline-block;flex-shrink:0"></span><strong>${g.name}</strong>${g.desc?`<span style="opacity:.7;font-size:11px">${g.desc}</span>`:''}<button style="background:none;border:none;cursor:pointer;color:${g.color};font-size:15px;padding:0;opacity:.7" onclick="delGroup('${g.id}')">×</button></div>`).join('');}
+
+// ══════════════════════════════════════════════════════════
+// VENDORS
+// ══════════════════════════════════════════════════════════
+function saveVendor(){
+  const name=document.getElementById('vn').value.trim();if(!name){toast('Name required','err');return;}
+  const eid=document.getElementById('veid').value;
+  const obj={id:eid||uid(),name,category:document.getElementById('vc').value,contact:document.getElementById('vco').value,phone:document.getElementById('vp').value,email:document.getElementById('ve').value,gst:document.getElementById('vg').value,address:document.getElementById('va').value};
+  if(eid){const i=V.findIndex(v=>v.id===eid);if(i>-1)V[i]=obj;}else V.push(obj);
+  persist();rVendors();rstVendor();fillVSel();toast(eid?'Updated!':'Added!');
+}
+function editVendor(id){const v=V.find(x=>x.id===id);if(!v)return;document.getElementById('vn').value=v.name;document.getElementById('vc').value=v.category||'';document.getElementById('vco').value=v.contact||'';document.getElementById('vp').value=v.phone||'';document.getElementById('ve').value=v.email||'';document.getElementById('vg').value=v.gst||'';document.getElementById('va').value=v.address||'';document.getElementById('veid').value=v.id;document.getElementById('vft').textContent='Edit — '+v.name;window.scrollTo(0,0);}
+function delVendor(id){
+  cfm('Delete vendor?','Bills will retain the vendor name.',()=>{
+    V=V.filter(v=>v.id!==id);
+    persist();rVendors();fillVSel();toast('Vendor deleted');
+  },{yesText:'Delete',danger:true});
+}
+function rstVendor(){['vn','vc','vco','vp','ve','vg','va'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('veid').value='';document.getElementById('vft').textContent='Add new vendor';}
+function rVendors(){const el=document.getElementById('vgrid');if(!V.length){el.innerHTML='<div class="empty"><h3>No vendors yet</h3></div>';return;}el.innerHTML=V.map(v=>{const vb=B.filter(b=>b.vendorId===v.id),tot=vb.reduce((s,b)=>s+b.total,0);return`<div class="vc"><div style="font-weight:600;font-size:13px;margin-bottom:3px">${v.name}</div>${v.category?`<div style="font-size:11px;color:var(--t3)">${v.category}</div>`:''} ${v.phone?`<div style="font-size:11px;color:var(--t3)">${v.phone}</div>`:''}<div style="font-size:11px;color:var(--teal);margin-top:4px">₹${fN(tot)} · ${vb.length} bills</div><div style="display:flex;gap:5px;margin-top:8px"><button class="btn bxs" onclick="editVendor('${v.id}')">Edit</button><button class="btn bd bxs" onclick="delVendor('${v.id}')">Delete</button></div></div>`;}).join('');}
+
+// ══════════════════════════════════════════════════════════
+// CHARTS
+// ══════════════════════════════════════════════════════════
+function mkCh(id,type,data,opts={}){if(CH[id]){CH[id].destroy();delete CH[id];}const ctx=document.getElementById(id);if(!ctx)return;CH[id]=new Chart(ctx,{type,data,options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8b949e',font:{size:10}}}},...opts}});}
+
+function rDash(){
+  const tm=new Date().toISOString().slice(0,7),tmb=B.filter(b=>b.date.startsWith(tm));
+  const tot=B.reduce((s,b)=>s+b.total,0),totm=tmb.reduce((s,b)=>s+b.total,0),pend=B.reduce((s,b)=>s+b.items.filter(i=>!i.groupId).length,0);
+  document.getElementById('sg').innerHTML=`<div class="stat"><div class="sl">Total bills</div><div class="sv">${B.length}</div></div><div class="stat"><div class="sl">Total expense</div><div class="sv" style="color:var(--teal)">₹${fN(tot)}</div></div><div class="stat"><div class="sl">This month</div><div class="sv" style="color:var(--amber)">₹${fN(totm)}</div></div><div class="stat"><div class="sl">Vendors</div><div class="sv">${V.length}</div></div><div class="stat"><div class="sl">Pending items</div><div class="sv" style="color:var(--rose)">${pend}</div></div>`;
+  const gT={};B.forEach(b=>b.items.forEach(i=>{const g=G.find(x=>x.id===i.groupId);const n=g?g.name:'Unassigned';gT[n]=(gT[n]||0)+i.total;}));
+  const gN=Object.keys(gT);mkCh('cG','doughnut',{labels:gN,datasets:[{data:gN.map(n=>gT[n]),backgroundColor:gN.map(n=>{const g=G.find(x=>x.name===n);return g?g.color+'cc':'#8b949eaa';}),borderColor:'transparent',hoverOffset:5}]},{plugins:{legend:{position:'right',labels:{color:'#8b949e',font:{size:10},boxWidth:9}}}});
+  const mM={};B.forEach(b=>{const m=b.date.slice(0,7);mM[m]=(mM[m]||0)+b.total;});const ms=Object.keys(mM).sort().slice(-12);
+  mkCh('cM','bar',{labels:ms.map(sM),datasets:[{data:ms.map(m=>mM[m]),backgroundColor:'#2dba9a44',borderColor:'#2dba9a',borderWidth:1.5,borderRadius:4}]},{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6e7681',font:{size:10}}},y:{ticks:{color:'#6e7681',callback:v=>'₹'+fN(v)}}}});
+  const vT={};B.forEach(b=>{vT[b.vendorName]=(vT[b.vendorName]||0)+b.total;});const tv=Object.entries(vT).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mkCh('cV','bar',{labels:tv.map(x=>x[0]),datasets:[{data:tv.map(x=>x[1]),backgroundColor:'#58a6ff44',borderColor:'#58a6ff',borderWidth:1.5,borderRadius:4}]},{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6e7681',callback:v=>'₹'+fN(v)}},y:{ticks:{color:'#8b949e',font:{size:10}}}}});
+  const dM={};tmb.forEach(b=>{dM[b.date]=(dM[b.date]||0)+b.total;});const ds=Object.keys(dM).sort();
+  mkCh('cD','line',{labels:ds.map(d=>d.slice(8)),datasets:[{data:ds.map(d=>dM[d]),borderColor:'#e3b341',backgroundColor:'#e3b34122',tension:.4,fill:true,pointBackgroundColor:'#e3b341',pointRadius:3}]},{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6e7681'}},y:{ticks:{color:'#6e7681',callback:v=>'₹'+fN(v)}}}});
+}
+
+function rAna(){
+  const yrs=[...new Set(B.map(b=>b.date.slice(0,4)))].sort().reverse();if(!yrs.length)yrs.push(''+new Date().getFullYear());
+  const ys=document.getElementById('ay'),cy=ys.value||yrs[0];ys.innerHTML=yrs.map(y=>`<option value="${y}"${y===cy?' selected':''}>${y}</option>`).join('');ys.value=cy;
+  const gs=document.getElementById('ag'),cg=gs.value;gs.innerHTML='<option value="">All groups</option>'+G.map(g=>`<option value="${g.id}"${g.id===cg?' selected':''}>${g.name}</option>`).join('');gs.value=cg;const sg=gs.value;
+  const yb=B.filter(b=>b.date.startsWith(cy));
+  const mo=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  mkCh('aSt','bar',{labels:mo.map(m=>sM(cy+'-'+m)),datasets:G.map(g=>({label:g.name,data:mo.map(m=>yb.filter(b=>b.date.slice(5,7)===m).reduce((s,b)=>s+b.items.filter(i=>i.groupId===g.id).reduce((a,i)=>a+i.total,0),0)),backgroundColor:g.color+'88',borderColor:g.color,borderWidth:1,borderRadius:2}))},{plugins:{legend:{labels:{color:'#8b949e',boxWidth:8,font:{size:9}}}},scales:{x:{stacked:true,ticks:{color:'#6e7681',font:{size:9}}},y:{stacked:true,ticks:{color:'#6e7681',callback:v=>'₹'+fN(v)}}}});
+  const gTot={};yb.forEach(b=>b.items.forEach(i=>{const g=G.find(x=>x.id===i.groupId);const n=g?g.name:'Unassigned';gTot[n]=(gTot[n]||0)+i.total;}));
+  const gpN=Object.keys(gTot);mkCh('aPi','pie',{labels:gpN,datasets:[{data:gpN.map(n=>gTot[n]),backgroundColor:gpN.map(n=>{const g=G.find(x=>x.name===n);return g?g.color+'cc':'#8b949eaa';}),borderColor:'transparent',hoverOffset:5}]},{plugins:{legend:{position:'bottom',labels:{color:'#8b949e',font:{size:9},boxWidth:8}}}});
+  const iM={};yb.forEach(b=>b.items.forEach(i=>{if(sg&&i.groupId!==sg)return;iM[i.name]=(iM[i.name]||0)+i.total;}));const ti=Object.entries(iM).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  mkCh('aIt','bar',{labels:ti.map(x=>x[0]),datasets:[{data:ti.map(x=>x[1]),backgroundColor:'#bc8cff55',borderColor:'#bc8cff',borderWidth:1.5,borderRadius:4}]},{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6e7681',callback:v=>'₹'+fN(v)}},y:{ticks:{color:'#8b949e',font:{size:10}}}}});
+  const iD={};yb.forEach(b=>b.items.forEach(i=>{if(sg&&i.groupId!==sg)return;if(!iD[i.name])iD[i.name]={name:i.name,gid:i.groupId,qty:0,bs:new Set(),tot:0,rs:0,rc:0};iD[i.name].qty+=i.qty;iD[i.name].tot+=i.total;iD[i.name].bs.add(b.id);if(i.rate){iD[i.name].rs+=i.rate;iD[i.name].rc++;}}));
+  document.getElementById('atI').innerHTML=Object.values(iD).sort((a,b)=>b.tot-a.tot).map(x=>{const g=G.find(g=>g.id===x.gid);return`<tr><td>${x.name}</td><td>${g?`<span class="badge" style="background:${g.color}22;color:${g.color};border:1px solid ${g.color}">${g.name}</span>`:'<span class="badge bp">Pending</span>'}</td><td class="mono">${x.qty}</td><td class="mono">${x.bs.size}</td><td class="amt">₹${fN(x.tot)}</td><td class="mono">${x.rc?'₹'+fN(x.rs/x.rc):'-'}</td></tr>`;}).join('');
+  const vD={};yb.forEach(b=>{if(!vD[b.vendorName])vD[b.vendorName]={n:b.vendorName,bills:0,tot:0};vD[b.vendorName].bills++;vD[b.vendorName].tot+=b.total;});
+  document.getElementById('atV').innerHTML=Object.values(vD).sort((a,b)=>b.tot-a.tot).map(x=>`<tr><td>${x.n}</td><td class="mono">${x.bills}</td><td class="amt">₹${fN(x.tot)}</td><td class="mono">₹${fN(x.tot/x.bills)}</td></tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// EXPORT PDF
+// ══════════════════════════════════════════════════════════
+function xPDF(type){
+  if(!window.jspdf){toast('PDF lib loading','err');return;}
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape'});
+  const pw=doc.internal.pageSize.getWidth();
+  doc.setFontSize(15);doc.setFont('helvetica','bold');doc.text('IVF Expense — '+(type==='group'?'Group-wise':'Vendor-wise'),14,16);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.text('Care & Cure IVF Centre  |  '+new Date().toLocaleDateString('en-IN'),14,23);doc.line(14,27,pw-14,27);let y=34;
+  if(type==='group'){
+    for(const g of G){
+      const rows=[];let tot=0;B.forEach(b=>b.items.filter(i=>i.groupId===g.id).forEach(i=>{rows.push([fD(b.date),b.vendorName,b.billNo||'-',i.name,i.qty.toString(),'Rs '+fN(i.rate),'Rs '+fN(i.total)]);tot+=i.total;}));
+      if(!rows.length)continue;
+      if(y>doc.internal.pageSize.getHeight()-55){doc.addPage();y=18;}
+      doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text(g.name+' - Rs '+fN(tot),14,y);y+=3;
+      doc.autoTable({startY:y,head:[['Date','Vendor','Bill#','Item','Qty','Rate','Total']],body:rows,theme:'striped',headStyles:{fillColor:[45,186,154],textColor:0,fontSize:9},bodyStyles:{fontSize:8},margin:{left:14,right:14}});
+      y=doc.lastAutoTable.finalY+10;
+    }
+  }else{
+    const vm={};B.forEach(b=>{if(!vm[b.vendorName])vm[b.vendorName]=[];vm[b.vendorName].push(b);});
+    for(const[vn,vb]of Object.entries(vm)){
+      const rows=[];let tot=0;vb.forEach(b=>b.items.forEach(i=>{const g=G.find(x=>x.id===i.groupId);rows.push([fD(b.date),b.billNo||'-',i.name,g?g.name:'Pending',i.qty.toString(),'Rs '+fN(i.rate),'Rs '+fN(i.total)]);tot+=i.total;}));
+      if(y>doc.internal.pageSize.getHeight()-55){doc.addPage();y=18;}
+      doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text(vn+' - Rs '+fN(tot),14,y);y+=3;
+      doc.autoTable({startY:y,head:[['Date','Bill#','Item','Group','Qty','Rate','Total']],body:rows,theme:'striped',headStyles:{fillColor:[88,166,255],textColor:0,fontSize:9},bodyStyles:{fontSize:8},margin:{left:14,right:14}});
+      y=doc.lastAutoTable.finalY+10;
+    }
+  }
+  doc.save('IVF_'+type+'_'+new Date().toISOString().slice(0,10)+'.pdf');toast('PDF downloaded!');
+}
+
+// ══════════════════════════════════════════════════════════
+// EXPORT EXCEL
+// ══════════════════════════════════════════════════════════
+function xXLS(type){
+  if(!window.XLSX){toast('Excel lib loading','err');return;}
+  const wb=XLSX.utils.book_new();
+  if(type==='group'){
+    const sr=[['Group','Total (Rs)','Bills','Items']];G.forEach(g=>{let tot=0,bc=new Set(),ic=0;B.forEach(b=>b.items.filter(i=>i.groupId===g.id).forEach(i=>{tot+=i.total;bc.add(b.id);ic++;}));if(tot>0)sr.push([g.name,tot,bc.size,ic]);});
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sr),'Summary');
+    for(const g of G){const rows=[['Date','Vendor','Bill#','Item','Qty','Rate','Total','Bill discount','Bill tax','Bill other','Bill total']];B.forEach(b=>b.items.filter(i=>i.groupId===g.id).forEach(i=>{rows.push([b.date,b.vendorName,b.billNo||'',i.name,i.qty,i.rate,i.total,b.discount||0,b.tax||0,b.other||0,b.total]);}));if(rows.length>1)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),g.name.slice(0,31));}
+  }else{
+    const sr=[['Vendor','Total (Rs)','Bills']];const vm2={};B.forEach(b=>{if(!vm2[b.vendorName])vm2[b.vendorName]={bills:0,total:0};vm2[b.vendorName].bills++;vm2[b.vendorName].total+=b.total;});Object.entries(vm2).forEach(([n,d])=>sr.push([n,d.total,d.bills]));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sr),'Summary');
+    const vm3={};B.forEach(b=>{if(!vm3[b.vendorName])vm3[b.vendorName]=[];vm3[b.vendorName].push(b);});
+    for(const[vn,vb]of Object.entries(vm3)){const rows=[['Date','Bill#','Item','Group','Qty','Rate','Item total','Discount','Tax','Other','Bill total']];vb.forEach(b=>b.items.forEach(i=>{const g=G.find(x=>x.id===i.groupId);rows.push([b.date,b.billNo||'',i.name,g?g.name:'Pending',i.qty,i.rate,i.total,b.discount||0,b.tax||0,b.other||0,b.total]);}));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),vn.slice(0,31));}
+  }
+  XLSX.writeFile(wb,'IVF_'+type+'_'+new Date().toISOString().slice(0,10)+'.xlsx');toast('Excel downloaded!');
+}
+
+// Save before close (best-effort)
+window.addEventListener('beforeunload',()=>{
+  if(syncTimer){clearTimeout(syncTimer);syncNow();}
+});
+
+init();
+</script>
+</body>
+</html>
